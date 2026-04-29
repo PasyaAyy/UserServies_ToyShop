@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 
 class UserController extends Controller
 {
@@ -53,6 +54,42 @@ class UserController extends Controller
         }
     }
 
+    public function getUserOrders($id)
+{
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'status' => 'Failed',
+            'message' => 'User not found',
+            'data' => null
+        ], 404);
+    }
+
+    $orderResponse = Http::get(
+        env('ORDER_SERVICE_URL') . '/api/orders/user/filter',
+        [
+            'user_id' => $id
+        ]
+    );
+
+    if ($orderResponse->failed()) {
+        return response()->json([
+            'status' => 'Failed',
+            'message' => 'Gagal mengambil riwayat order dari OrderService',
+            'data' => null
+        ], 500);
+    }
+
+    return response()->json([
+        'status' => 'Success',
+        'message' => 'Riwayat order user berhasil diambil',
+        'data' => [
+            'user' => $user,
+            'orders' => $orderResponse->json()
+        ]
+    ]);
+}
     public function update(Request $request, $id)
     {
         $user = User::find($id);
